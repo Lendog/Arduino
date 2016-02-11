@@ -33,7 +33,7 @@
 
 #define ONE_WIRE_BUS 3 // Pin where dallase sensor is connected 
 #define MAX_ATTACHED_DS18B20 16
-unsigned long SLEEP_TIME = 30000; // Sleep time between reads (in milliseconds)
+unsigned long SLEEP_TIME = 30000; // Sleep time between reads (in milliseconds).. - Could use 60000*10  (1min in mill seconds * 10) for 10 min readings
 OneWire oneWire(ONE_WIRE_BUS); // Setup a oneWire instance to communicate with any OneWire devices (not just Maxim/Dallas temperature ICs)
 DallasTemperature sensors(&oneWire); // Pass the oneWire reference to Dallas Temperature. 
 MySensor gw;
@@ -51,7 +51,7 @@ void setup()
   // requestTemperatures() will not block current thread
   sensors.setWaitForConversion(false);
 
-  // Startup and initialize MySensors library. Set callback for incoming messages. 
+  // Startup and initialize MySensors library. Set callback for incoming messages.    If you get 'req id' on sensor log use this setting  gw.begin(NULL, 10);   (assigns 10 as the node id and no incoming messages - http://forum.mysensors.org/topic/2758/help-with-req-id/2 note - each node id needs to be unique)
   gw.begin();
 
   // Send the sketch version information to the gateway and Controller
@@ -87,16 +87,14 @@ void loop()
     float temperature = static_cast<float>(static_cast<int>((gw.getConfig().isMetric?sensors.getTempCByIndex(i):sensors.getTempFByIndex(i)) * 10.)) / 10.;
  
     // Only send data if temperature has changed and no error
-    #if COMPARE_TEMP == 1
-    if (lastTemperature[i] != temperature && temperature != -127.00 && temperature != 85.00) {
-    #else
-    if (temperature != -127.00 && temperature != 85.00) {
-    #endif
- 
-      // Send in the new temperature
-      gw.send(msg.setSensor(i).set(temperature,1));
-      // Save new temperatures for next compare
-      lastTemperature[i]=temperature;
+    if (COMPARE_TEMP == 1){
+      if (lastTemperature[i] != temperature && temperature != -127.00 && temperature != 85.00) {
+        // Send in the new temperature
+        gw.send(msg.setSensor(i).set(temperature,1));
+        // Save new temperatures for next compare
+        lastTemperature[i]=temperature;
+        gw.sleep(16000);  // thingspeak needs 15 second wait before posts - so sleep for 16 seconds before next sensor reading. comment out line with // if not needed
+      }
     }
   }
   gw.sleep(SLEEP_TIME);
